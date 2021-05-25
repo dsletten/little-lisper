@@ -1,0 +1,69 @@
+;;;    -*- Mode: Lisp; Syntax: Common-Lisp -*- 
+How to create an anonymous function that can call itself recursively?
+
+(defun factorial (n)
+  (if (zerop n)
+      1
+      (* n (factorial (1- n)))) )
+
+(factorial 8)
+OR
+(funcall #'factorial 8)
+
+1. Use a function-making function:
+(defun fact-maker ()
+  #'(lambda (n)
+      (if (zerop n)
+	  1
+	  (* n (funcall (fact-maker) (1- n)))) ) )
+
+(funcall (fact-maker) 8) => 40320
+
+Now the factorial code doesn't need to be named; it doesn't call itself, but
+rather calls FACT-MAKER to make a clone of itself. However, here we merely
+shift the blame. We eliminate our reliance on one name (FACTORIAL) at the cost
+of becoming dependent on another name (FACT-MAKER).
+
+2. Have the function-making function accept itself as an argument.
+(defun fact-maker (f)
+  #'(lambda (n)
+      (if (zerop n)
+	  1
+	  (* n (funcall (fact-maker f) (1- n)))) ) )
+
+(funcall (fact-maker #'fact-maker) 8) => 40320
+
+;;;
+;;;    Alternatively:
+;;;    (Although this does not return a function and in fact changes the
+;;;    definition slightly (2 args))
+;;;    This does not reference itself in its definition, however, it must do so
+;;;    in its invocation.
+;;;    
+; (defun fact-maker (f n)
+;   (if (zerop n)
+;       1
+;       (* n (funcall f f (1- n)))) )
+;
+;(fact-maker #'fact-maker 8)
+
+This allows us to remove the reference to FACT-MAKER in its own definition:
+(defun fact-maker (f)
+  #'(lambda (n)
+      (if (zerop n)
+	  1
+	  (* n (funcall (funcall f f) (1- n)))) ) )
+
+3. Replace the function definition with explicit code:
+(funcall ((lambda (f)
+	    #'(lambda (n)
+		(if (zerop n)
+		    1
+		    (* n (funcall (funcall f f) (1- n)))) ))
+	  #'(lambda (f)
+	      #'(lambda (n)
+		  (if (zerop n)
+		      1
+		      (* n (funcall (funcall f f) (1- n)))) )))
+	 8)
+
