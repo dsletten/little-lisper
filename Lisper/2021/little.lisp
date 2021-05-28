@@ -632,6 +632,7 @@
         (t t)))
 
 (defun rember* (a l)
+  "Remove all instances of A from the tree L."
   (cond ((null l) '())
         ((atom (car l))
          (cond ((eql (car l) a) (rember* a (cdr l)))
@@ -647,6 +648,41 @@
                                    (cons car (rember* a cdr))))
                    (t (cons (rember* a car)
                             (rember* a cdr)))) ))))
+
+;;;
+;;;    My solution from 2002 (!!) handles this more elegantly.
+;;;    (Consistent with semantics of "The Little Lisper" where () is both list/atom.
+;;;     Different in "The Little Schemer")
+;;;
+;;;    OBJ is either an atom or a CONS:
+;;;    1a If we've reached the end of the top-level list or any nested sublist, then OBJ is (),
+;;;       which is an atom. Return it as the foundation of rebuilding the tree structure.
+;;;     b Otherwise, we have the pathological case where REMBER* was called with an atomic tree OBJ.
+;;;     c Or the atom OBJ does not match ELT and slipped the through the following test. Just return it.
+;;;    2a OBJ is a CONS whose first element matches ELT. Remove it by simply recursively processing the
+;;;       rest of the tree.
+;;;     b The first element of OBJ does not match ELT (Although it may be either an atom or a CONS.)
+;;;       Process both the CAR and CDR of OBJ and then reassemble those results with CONS.
+;;;
+;;;    To be fair, this violates The Law of Eq?. In the book both args to eq? must be atoms. We don't know
+;;;    for sure that (car obj) is an atom in the 2nd COND clause.
+;;;
+;;;    In the book's style (Although this also violates The Fourth Commandment!)
+;;;    
+(defun rember* (elt obj)
+  (cond ((atom obj) obj)
+	(t (cond ((eq (car obj) elt) (rember* elt (cdr obj)))
+	         (t (cons (rember* elt (car obj))
+		          (rember* elt (cdr obj)))) ))))
+
+;;;
+;;;    My actual version.
+;;;    
+(defun rember* (elt obj)
+  (cond ((atom obj) obj)
+	((eq (car obj) elt) (rember* elt (cdr obj)))
+	(t (cons (rember* elt (car obj))
+		 (rember* elt (cdr obj)))) ) )
 
 (deftest test-rember* ()
   (check
@@ -682,6 +718,15 @@
                (t (occur* a (cdr l)))) )
         (t (+ (occur* a (car l))
               (occur* a (cdr l)))) ))
+
+;;;
+;;;    2002. See notes regarding REMBER* above.
+;;;    
+(defun occur* (a l)
+  (cond ((eq a l) 1)
+	((atom l) 0)
+	(t (+ (occur* a (car l))
+	      (occur* a (cdr l)))) ) )
 
 (deftest test-occur* ()
   (check

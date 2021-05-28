@@ -19,7 +19,8 @@
 ;;;
 ;;;   EXAMPLE:
 ;;;
-;;;   NOTES:
+;;;   NOTES: These functions generally violate The Law of Eq? In the book, both
+;;;          args must be atoms. 210527
 ;;;
 ;;;
 (defun rember* (elt obj)
