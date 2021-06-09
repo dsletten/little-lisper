@@ -76,7 +76,6 @@
 	(t (or (member* a (car l))
 	       (member* a (cdr l)))) ) )
 
-
 (defun eqan (a1 a2)
   (cond ((numberp a1)
 	 (and (numberp a2) (= a1 a2)))

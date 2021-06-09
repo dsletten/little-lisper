@@ -458,6 +458,14 @@
         ((numberp a2) nil)
         (t (eql a1 a2))))
 
+;;;
+;;;    Nicer. See EQUAL below.
+;;;    
+(defun eqatom (a1 a2)
+  (cond ((and (numberp a1) (numberp a2)) (= a1 a2))
+        ((or (numberp a1) (numberp a2)) nil)
+        (t (eql a1 a2))))
+
 (deftest test-eqatom ()
   (check
    (eqatom 3 3)
@@ -614,6 +622,14 @@
         ((atom (first l)) (first l))
         (t (leftmost (first l)))) )
 
+;;;
+;;;    Better. 2012.
+;;;
+(defun leftmost (l)
+  (if (atom l)
+      l
+      (leftmost (first l))))
+
 (deftest test-leftmost ()
   (check
    (eql (leftmost '((hot) (tuna (and)) cheese)) 'hot)
@@ -706,6 +722,15 @@
                    (t (cons (insertr* old new car)
                             (insertr* old new cdr)))) ))))
 
+;;;
+;;;    Hybrid. 2012. Graham-style
+;;;    
+(defun insertr* (old new l)
+  (loop for elt in l
+        when (atom elt) collect elt
+        when (eql elt old) collect new
+        when (consp elt) collect (insertr* old new elt)))
+
 (deftest test-insertr* ()
   (check
    (equal (insertr* 'chuck 'roast '((how much (wood)) could ((a (wood) chuck)) (((chuck))) (if (a) ((wood chuck))) could chuck wood))
@@ -740,11 +765,32 @@
         (t (cons (subst* old new (car l))
                  (subst* old new (cdr l)))) ))
 
+;;;
+;;;    2002. See notes regarding REMBER* above.
+;;;    
+(defun subst* (old new l)
+  (cond ((eq old l) new)
+	((atom l) l)
+	(t (cons (subst* old new (car l))
+		 (subst* old new (cdr l)))) ) )
+
+;;;
+;;;    2012. Hybrid
+;;;    
+(defun subst* (old new l)
+  (loop for elt in l
+        unless (or (consp elt) (eql elt old)) collect elt
+        when (eql elt old) collect new
+        when (consp elt) collect (subst* old new elt)))
+
 (deftest test-subst* ()
   (check
    (equal (subst* 'banana 'orange '((banana) (split ((((banana ice))) (cream (banana)) sherbet)) (banana) (bread) (banana brandy)))
           '((orange) (split ((((orange ice))) (cream (orange)) sherbet)) (orange) (bread) (orange brandy)))) )
 
+;;;
+;;;    Can't reduce INSERTR*/INSERTL* in 2002 style...
+;;;    
 (defun insertl* (old new l)
   (cond ((null l) '())
         ((atom (car l))
@@ -789,6 +835,16 @@
         ((atom (car l)) (or (eql (car l) a) (member* a (cdr l))))
         (t (or (member* a (car l))
                (member* a (cdr l)))) ))
+
+;;;
+;;;    2002. See notes regarding REMBER* above.
+;;;    
+(defun member* (a l)
+  (cond ((null l) nil)
+	((eq a l) t)
+	((atom l) nil)
+	(t (or (member* a (car l))
+	       (member* a (cdr l)))) ) )
 
 (deftest test-member* ()
   (check
@@ -854,6 +910,14 @@
         ((or (atom o1) (atom o2)) nil)
         (t (eqlist o1 o2))))
 
+;;;
+;;;    2012 alternative.
+;;;
+(defun equal (o1 o2)
+  (cond ((and (atom o1) (atom o2)) (eqan o1 o2))
+        ((and (consp o1) (consp o2)) (eqlist o1 o2))
+        (t nil)))
+
 (deftest test-equal ()
   (check
    (equal 3 3)
@@ -872,7 +936,8 @@
   (cond ((null l1) (null l2))
         ((null l2) nil)
         (t (and (equal (car l1) (car l2))
-                (equal (cdr l1) (cdr l2)))) ))
+                (equal (cdr l1) (cdr l2)))) )) ; 2012 note: EQUAL here allows dotted lists as args.
+                                        ; Replacing with EQLIST forces proper lists.
 
 ;; (defun rember (s l)
 ;;   (cond ((null l) '())
@@ -1223,7 +1288,7 @@
 
 (defun rember-f (test a l)
   (cond ((null l) '())
-        ((funcall test (first l) a) (rest l))
+        ((funcall test (first l) a) (rest l)) ; Wrong order. See MEMBER below.
         (t (cons (first l) (rember-f test a (rest l)))) ))
 
 (deftest test-rember-f ()
